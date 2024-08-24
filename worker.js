@@ -6,7 +6,10 @@ async function handleRequest(request) {
   if (request.method === 'POST' && new URL(request.url).pathname === '/api/analyze') {
     const { url } = await request.json()
     
-    // 这里应该是实际的视频分析逻辑
+    // 使用环境变量中的 YouTube API 密钥
+    const youtubeApiKey = YOUTUBE_API_KEY;
+    
+    // 这里应该是实际的 YouTube API 调用和视频分析逻辑
     // 现在我们只返回一些模拟数据
     const videoInfo = {
       title: 'Sample Video',
