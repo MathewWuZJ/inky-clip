@@ -1,10 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Hono } from 'hono';
-import { cache } from 'hono/cache';
+// @ts-ignore
+export { };
 
-const app = new Hono();
+import { Hono } from 'https://cdn.jsdelivr.net/npm/hono@3.5.0/dist/index.js'
 
-app.get('/', (c) => c.text('Hello Hono!'));
+const app = new Hono()
+
+app.get('/', (c) => c.text('Hello Hono!'))
 
 app.get('/api/analyze', async (c) => {
   const url = c.req.query('url');
@@ -74,23 +75,32 @@ async function getVideoDetails(videoId, apiKey) {
 }
 
 async function analyzeVideoWithGemini(videoDetails, apiKey) {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: `Analyze the following video content and suggest 3-5 viral short video clips:
+                 Title: ${videoDetails.title}
+                 Description: ${videoDetails.description}
+                 Duration: ${videoDetails.duration}
+                 Channel: ${videoDetails.channelTitle}
 
-  const prompt = `Analyze the following video content and suggest 3-5 viral short video clips:
-                  Title: ${videoDetails.title}
-                  Description: ${videoDetails.description}
-                  Duration: ${videoDetails.duration}
-                  Channel: ${videoDetails.channelTitle}
+                 For each suggested clip, provide:
+                 1. A catchy title
+                 2. Start and end timestamps in seconds
+                 3. Brief explanation of why it could be viral`
+        }]
+      }]
+    })
+  });
 
-                  For each suggested clip, provide:
-                  1. A catchy title
-                  2. Start and end timestamps in seconds
-                  3. Brief explanation of why it could be viral`;
-
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  return response.text();
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
 }
 
 function parseClipSuggestions(analysis) {
@@ -120,4 +130,6 @@ async function downloadAndMergeClip(videoId, start, end, env) {
   return mockClipUrl;
 }
 
-export default app;
+export default {
+  fetch: app.fetch
+};
