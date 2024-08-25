@@ -1,7 +1,11 @@
-name = "inky-clip-worker"
-type = "webpack"
-account_id = "your-account-id"
-workers_dev = true
-route = ""
-zone_id = ""
-compatibility_date = "2022-06-01"
+name = "inky-clip"
+main = "worker.js"
+compatibility_date = "2023-05-18"
+
+[vars]
+YOUTUBE_API_KEY = "your_youtube_api_key_here"
+GEMINI_API_KEY = "your_gemini_api_key_here"
+
+[[routes]]
+pattern = "/*"
+script = "worker.js"
