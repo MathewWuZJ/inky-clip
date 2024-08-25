@@ -1,0 +1,136 @@
+.App {
+  text-align: center;
+  background-color: #000000;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  color: #ffffff;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.App-header {
+  margin-bottom: 40px;
+  width: 100%;
+}
+
+h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  background: linear-gradient(45deg, #6b46c1, #9f7aea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.url-input {
+  width: 80%;
+  max-width: 600px;
+  padding: 10px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 5px;
+  margin-right: 10px;
+  background-color: #2d3748;
+  color: #ffffff;
+}
+
+.submit-button, .download-button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 5px;
+  background: linear-gradient(45deg, #6b46c1, #9f7aea);
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.submit-button:hover, .download-button:hover {
+  opacity: 0.8;
+}
+
+.submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.video-details {
+  margin-top: 40px;
+  max-width: 600px;
+}
+
+.video-details img {
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+.clip-suggestions {
+  margin-top: 40px;
+  text-align: left;
+  max-width: 800px;
+}
+
+.clip-suggestions ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.clip-suggestions li {
+  background-color: #2d3748;
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.clip-suggestions li:hover, .clip-suggestions li.selected {
+  background-color: #4a5568;
+}
+
+.clip-preview {
+  margin-top: 40px;
+  max-width: 800px;
+}
+
+.clip-preview video {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.error {
+  color: #fc8181;
+  margin-top: 20px;
+}
+
+.loader {
+  margin-top: 20px;
+  font-size: 1.2rem;
+  color: #9f7aea;
+}
+
+@media (max-width: 768px) {
+  .url-input, .submit-button, .download-button {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.loader {
+  animation: pulse 1.5s infinite;
+}
