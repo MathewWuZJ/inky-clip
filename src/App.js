@@ -1,86 +1,116 @@
 import React, { useState } from 'react';
+import './App.css';
 
-export default function App() {
+function App() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [videoInfo, setVideoInfo] = useState(null);
-  const [viralSegments, setViralSegments] = useState([]);
+  const [videoDetails, setVideoDetails] = useState(null);
+  const [clipSuggestions, setClipSuggestions] = useState([]);
+  const [error, setError] = useState('');
+  const [selectedClip, setSelectedClip] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
+    setVideoDetails(null);
+    setClipSuggestions([]);
+
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      });
+      const response = await fetch(`/api/analyze?url=${encodeURIComponent(url)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch video details');
+      }
       const data = await response.json();
-      setVideoInfo(data.video_info);
-      setViralSegments(data.viral_segments);
+      setVideoDetails(data.videoDetails);
+      setClipSuggestions(data.clipSuggestions);
     } catch (error) {
-      console.error('Error:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleClipSelect = (clip) => {
+    setSelectedClip(clip);
+  };
+
+  const handleClipDownload = async () => {
+    if (!selectedClip) return;
+
+    try {
+      const response = await fetch(`/api/download-clip?videoId=${videoDetails.id}&start=${selectedClip.timestamps[0]}&end=${selectedClip.timestamps[1]}`);
+      if (!response.ok) {
+        throw new Error('Failed to download clip');
+      }
+      const data = await response.json();
+      window.open(data.clipUrl, '_blank');
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black to-purple-900 flex flex-col items-center justify-center p-4">
-      <h1 className="text-4xl md:text-6xl font-bold text-white mb-8">InkyClip</h1>
-      <form onSubmit={handleSubmit} className="w-full max-w-2xl">
-        <div className="relative">
+    <div className="App">
+      <header className="App-header">
+        <h1>InkyClip</h1>
+        <form onSubmit={handleSubmit}>
           <input
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Enter or paste YouTube/Bilibili video URL or channel name here"
-            className="w-full px-4 py-2 rounded-lg bg-white bg-opacity-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Enter YouTube/Bilibili video URL"
+            className="url-input"
           />
-          <button
-            type="submit"
-            className="absolute right-0 top-0 h-full px-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-r-lg text-white font-semibold flex items-center"
-          >
-            Get Clips
+          <button type="submit" className="submit-button" disabled={loading}>
+            Analyze Video
           </button>
-        </div>
-      </form>
-      {loading && (
-        <div className="mt-8">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
-        </div>
-      )}
-      {videoInfo && (
-        <div className="mt-8 bg-white bg-opacity-10 rounded-lg p-6 w-full max-w-2xl">
-          <img src={videoInfo.thumbnail} alt="Video thumbnail" className="w-full rounded-lg mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">{videoInfo.title}</h2>
-          <div className="flex justify-between text-gray-300">
-            <span>Duration: {videoInfo.duration}</span>
-            <span>Views: {videoInfo.view_count}</span>
+        </form>
+      </header>
+      <main>
+        {loading && <div className="loader">Analyzing video...</div>}
+        {error && <p className="error">{error}</p>}
+        {videoDetails && (
+          <div className="video-details">
+            <img src={videoDetails.thumbnailUrl} alt={videoDetails.title} />
+            <h2>{videoDetails.title}</h2>
+            <p>Duration: {videoDetails.duration}</p>
+            <p>Channel: {videoDetails.channelTitle}</p>
           </div>
-        </div>
-      )}
-      {viralSegments.length > 0 && (
-        <div className="mt-8 bg-white bg-opacity-10 rounded-lg p-6 w-full max-w-2xl">
-          <h3 className="text-lg font-bold text-white mb-4">Potential Viral Clips</h3>
-          {viralSegments.map((segment, index) => (
-            <div key={index} className="mb-4 p-4 bg-purple-800 bg-opacity-50 rounded-lg">
-              <h4 className="text-white font-semibold">Segment {index + 1}</h4>
-              <p className="text-gray-300">Viral Potential: {segment.analysis.viral_potential.toFixed(2)}</p>
-              <p className="text-gray-300">Summary: {segment.analysis.summary}</p>
-              <div className="mt-2">
-                {segment.analysis.tags.map((tag, tagIndex) => (
-                  <span key={tagIndex} className="inline-block bg-purple-600 text-white rounded-full px-3 py-1 text-sm font-semibold mr-2 mb-2">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        )}
+        {clipSuggestions.length > 0 && (
+          <div className="clip-suggestions">
+            <h3>Suggested Viral Clips:</h3>
+            <ul>
+              {clipSuggestions.map((clip, index) => (
+                <li key={index} onClick={() => handleClipSelect(clip)} className={selectedClip === clip ? 'selected' : ''}>
+                  <h4>{clip.title}</h4>
+                  <p>Time: {formatTimestamp(clip.timestamps[0])} - {formatTimestamp(clip.timestamps[1])}</p>
+                  <p>{clip.explanation}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {selectedClip && (
+          <div className="clip-preview">
+            <h3>Selected Clip Preview</h3>
+            <video controls>
+              <source src={`https://www.youtube.com/embed/${videoDetails.id}?start=${selectedClip.timestamps[0]}&end=${selectedClip.timestamps[1]}`} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            <button onClick={handleClipDownload} className="download-button">Download Clip</button>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
+
+function formatTimestamp(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+export default App;
