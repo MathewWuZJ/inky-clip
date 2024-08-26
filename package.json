@@ -9,7 +9,7 @@
     "node-fetch": "^2.6.1"
   },
   "scripts": {
-    "prebuild": "npm install",  // 添加了 prebuild 脚本
+    "prebuild": "npm ci",  // 添加了 prebuild 脚本
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
