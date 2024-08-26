@@ -5,7 +5,8 @@
   "dependencies": {
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-scripts": "4.0.3"
+    "react-scripts": "4.0.3",
+    "node-fetch": "^2.6.1"  // 添加了 node-fetch 依赖项
   },
   "scripts": {
     "start": "react-scripts start",
