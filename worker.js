@@ -1,132 +1,157 @@
-addEventListener('fetch', async event => {
-  // 使用动态导入加载 Hono
-  const { Hono } = await import('https://cdn.jsdelivr.net/npm/hono@3.5.0/dist/index.js');
-  const app = new Hono();
+// 使用 Cloudflare Workers 原生的 fetch 事件处理
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
 
-  app.get('/', (c) => c.text('Hello Hono!'));
+async function handleRequest(request) {
+  const url = new URL(request.url)
+  const path = url.pathname
 
-  app.get('/api/analyze', async (c) => {
-    const url = c.req.query('url');
-    if (!url) {
-      return c.json({ error: 'Missing video URL' }, 400);
-    }
+  if (path === '/') {
+    return new Response('Hello World!', { status: 200 })
+  } else if (path === '/api/analyze') {
+    return handleAnalyze(request)
+  } else if (path === '/api/download-clip') {
+    return handleDownloadClip(request)
+  } else {
+    return new Response('Not Found', { status: 404 })
+  }
+}
 
-    const videoId = extractVideoId(url);
-    if (!videoId) {
-      return c.json({ error: 'Invalid video URL' }, 400);
-    }
-
-    try {
-      const videoDetails = await getVideoDetails(videoId, c.env.YOUTUBE_API_KEY);
-      const analysis = await analyzeVideoWithGemini(videoDetails, c.env.GEMINI_API_KEY);
-      const clipSuggestions = parseClipSuggestions(analysis);
-
-      return c.json({ videoDetails, clipSuggestions });
-    } catch (error) {
-      return c.json({ error: error.message }, 500);
-    }
-  });
-
-  app.get('/api/download-clip', async (c) => {
-    const { videoId, start, end } = c.req.query();
-    if (!videoId ||!start ||!end) {
-      return c.json({ error: 'Missing required parameters' }, 400);
-    }
-
-    try {
-      const clipUrl = await downloadAndMergeClip(videoId, start, end, c.env);
-      return c.json({ clipUrl });
-    } catch (error) {
-      return c.json({ error: error.message }, 500);
-    }
-  });
-
-  function extractVideoId(url) {
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const bilibiliRegex = /bilibili\.com\/video\/(BV[a-zA-Z0-9]+)/;
-
-    let match = url.match(youtubeRegex);
-    if (match) return match[1];
-
-    match = url.match(bilibiliRegex);
-    if (match) return match[1];
-
-    return null;
+async function handleAnalyze(request) {
+  const url = new URL(request.url).searchParams.get('url')
+  if (!url) {
+    return new Response(JSON.stringify({ error: 'Missing video URL' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 
-  async function getVideoDetails(videoId, apiKey) {
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`);
-    const data = await response.json();
-
-    if (data.items && data.items.length > 0) {
-      const item = data.items[0];
-      return {
-        title: item.snippet.title,
-        description: item.snippet.description,
-        thumbnailUrl: item.snippet.thumbnails.high.url,
-        duration: item.contentDetails.duration,
-        channelTitle: item.snippet.channelTitle
-      };
-    } else {
-      throw new Error('Video not found');
-    }
+  const videoId = extractVideoId(url)
+  if (!videoId) {
+    return new Response(JSON.stringify({ error: 'Invalid video URL' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 
-  async function analyzeVideoWithGemini(videoDetails, apiKey) {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Analyze the following video content and suggest 3-5 viral short video clips:
-                   Title: ${videoDetails.title}
-                   Description: ${videoDetails.description}
-                   Duration: ${videoDetails.duration}
-                   Channel: ${videoDetails.channelTitle}
+  try {
+    const videoDetails = await getVideoDetails(videoId, YOUTUBE_API_KEY)
+    const analysis = await analyzeVideoWithGemini(videoDetails, GEMINI_API_KEY)
+    const clipSuggestions = parseClipSuggestions(analysis)
 
-                   For each suggested clip, provide:
-                   1. A catchy title
-                   2. Start and end timestamps in seconds
-                   3. Brief explanation of why it could be viral`
-          }]
+    return new Response(JSON.stringify({ videoDetails, clipSuggestions }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+}
+
+async function handleDownloadClip(request) {
+  const url = new URL(request.url)
+  const videoId = url.searchParams.get('videoId')
+  const start = url.searchParams.get('start')
+  const end = url.searchParams.get('end')
+  
+  if (!videoId || !start || !end) {
+    return new Response(JSON.stringify({ error: 'Missing required parameters' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  try {
+    const clipUrl = await downloadAndMergeClip(videoId, start, end)
+    return new Response(JSON.stringify({ clipUrl }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+}
+
+function extractVideoId(url) {
+  const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+  const bilibiliRegex = /bilibili\.com\/video\/(BV[a-zA-Z0-9]+)/
+  
+  let match = url.match(youtubeRegex)
+  if (match) return match[1]
+  
+  match = url.match(bilibiliRegex)
+  if (match) return match[1]
+  
+  return null
+}
+
+async function getVideoDetails(videoId, apiKey) {
+  const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`)
+  const data = await response.json()
+
+  if (data.items && data.items.length > 0) {
+    const item = data.items[0]
+    return {
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnailUrl: item.snippet.thumbnails.high.url,
+      duration: item.contentDetails.duration,
+      channelTitle: item.snippet.channelTitle
+    }
+  } else {
+    throw new Error('Video not found')
+  }
+}
+
+async function analyzeVideoWithGemini(videoDetails, apiKey) {
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: `Analyze the following video content and suggest 3-5 viral short video clips:
+                 Title: ${videoDetails.title}
+                 Description: ${videoDetails.description}
+                 Duration: ${videoDetails.duration}
+                 Channel: ${videoDetails.channelTitle}
+
+                 For each suggested clip, provide:
+                 1. A catchy title
+                 2. Start and end timestamps in seconds
+                 3. Brief explanation of why it could be viral`
         }]
-      })
-    });
+      }]
+    })
+  })
 
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-  }
+  const data = await response.json()
+  return data.candidates[0].content.parts[0].text
+}
 
-  function parseClipSuggestions(analysis) {
-    // This is a simplified parser. You might need to adjust it based on the actual output format from Gemini.
-    const suggestions = analysis.split('\n\n');
-    return suggestions.map(suggestion => {
-      const lines = suggestion.split('\n');
-      return {
-        title: lines[0].replace(/^\d+\.\s*/, ''),
-        timestamps: lines[1].match(/(\d+):(\d+)\s*-\s*(\d+):(\d+)/).slice(1).map(Number),
-        explanation: lines[2]
-      };
-    });
-  }
+function parseClipSuggestions(analysis) {
+  const suggestions = analysis.split('\n\n')
+  return suggestions.map(suggestion => {
+    const lines = suggestion.split('\n')
+    return {
+      title: lines[0].replace(/^\d+\.\s*/, ''),
+      timestamps: lines[1].match(/(\d+):(\d+)\s*-\s*(\d+):(\d+)/).slice(1).map(Number),
+      explanation: lines[2]
+    }
+  })
+}
 
-  async function downloadAndMergeClip(videoId, start, end, env) {
-    // This is a placeholder function. You'll need to implement the actual video downloading and merging logic.
-    // For now, we'll just return a mock URL.
-    const mockClipUrl = `https://example.com/clips/${videoId}_${start}_${end}.mp4`;
-
-    // In a real implementation, you would:
-    // 1. Download the video segment from YouTube
-    // 2. Process and merge the clip
-    // 3. Store the clip temporarily (e.g., using Cloudflare R2 or KV)
-    // 4. Return the URL to the stored clip
-
-    return mockClipUrl;
-  }
-
-  event.respondWith(app.fetch(event.request));
-});
+async function downloadAndMergeClip(videoId, start, end) {
+  const mockClipUrl = `https://example.com/clips/${videoId}_${start}_${end}.mp4`
+  return mockClipUrl
+}
