@@ -1,12 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>InkyClip</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inky Clip - Video Analysis Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4A0E4E',
+                        secondary: '#8E24AA',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+
+        .logo {
+            font-family: 'Pacifico', cursive;
+            font-size: 3rem;
+            color: #8E24AA;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            position: relative;
+            display: inline-block;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #8E24AA, transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .clip-icon {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #8E24AA;
+            border-radius: 5px;
+            position: relative;
+            transform: rotate(45deg);
+            margin-left: 10px;
+        }
+
+        .clip-icon::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%;
+            height: 60%;
+            border: 2px solid #8E24AA;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col">
+    <header class="py-6">
+        <h1 class="text-center">
+            <span class="logo">InkyClip</span>
+            <span class="clip-icon"></span>
+        </h1>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto text-center mb-12">
+            <h2 class="text-2xl font-semibold mb-4">Video Analysis Tool</h2>
+            <p class="text-gray-400">Enter a YouTube or Bilibili video URL to get started</p>
+        </div>
+
+        <form id="analyzeForm" class="max-w-xl mx-auto">
+            <div class="flex items-center border-b-2 border-secondary py-2">
+                <input type="text" id="videoUrl" name="videoUrl" required
+                       class="appearance-none bg-transparent border-none w-full text-white mr-3 py-1 px-2 leading-tight focus:outline-none"
+                       placeholder="https://www.youtube.com/watch?v=...">
+                <button type="submit"
+                        class="flex-shrink-0 bg-secondary hover:bg-purple-700 border-secondary hover:border-purple-700 text-sm text-white py-2 px-4 rounded transition duration-300 ease-in-out">
+                    Analyze
+                </button>
+            </div>
+        </form>
+
+        <div id="results" class="mt-12 max-w-2xl mx-auto hidden">
+            <h3 class="text-xl font-semibold mb-4 text-secondary">Analysis Results</h3>
+            <div id="videoDetails" class="mb-6"></div>
+            <div id="clipSuggestions"></div>
+        </div>
+    </main>
+
+    <footer class="py-4 text-center text-gray-500">
+        <p>&copy; 2024 InkyClip. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // JavaScript code remains the same as in the previous version
+    </script>
+</body>
 </html>
